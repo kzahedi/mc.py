@@ -99,6 +99,49 @@ def emperical_joint_distribution(w_prime, w, a):
   p = p / s
   return p
 
+def calc_p_w_prime_given_w(joint_distribution):
+    p_w_prime_w = joint_distribution.sum(axis=2)
+    p_w         = joint_distribution.sum(axis=(0,2))
+    for w_prime in range(0,joint_distribution.shape[0]):
+        for w in range(0, joint_distribution.shape[1]):
+            p_w_prime_w[w_prime, w] = p_w_prime_w[w_prime, w] / p_w[w]
+    return p_w_prime_w
+
+def calc_p_w_prime_given_a(joint_distribution):
+    p_w_prime_a = joint_distribution.sum(axis=1)
+    p_a         = joint_distribution.sum(axis=(0,1))
+    for w_prime in range(0,joint_distribution.shape[0]):
+        for a in range(0, joint_distribution.shape[2]):
+            p_w_prime_a[w_prime, a] = p_w_prime_a[w_prime, a] / p_a[a]
+    return p_w_prime_a
+
+def calc_p_w_prime_given_w_a(joint_distribution):
+    p_w_a               = joint_distribution.sum(axis=0)
+    p_w_prime_given_w_a = numpy.zeros(joint_distribution.shape)
+    for w_prime in range(0, joint_distribution.shape[0]):
+        for w in range(0, joint_distribution.shape[1]):
+            for a in range(0, joint_distribution.shape[2]):
+                p_w_prime_given_w_a[w_prime, w, a] = joint_distribution[w_prime, w, a] / p_w_a[w,a]
+    return p_w_prime_given_w_a
 
 def calculate_concept_one(joint_distribution):
-  return 0.0
+    p_w_prime_given_w   = calc_p_w_prime_given_w(joint_distribution)
+    p_w_prime_given_w_a = calc_p_w_prime_given_w_a(joint_distribution)
+    r = 0
+    for w_prime in range(0, joint_distribution.shape[0]):
+        for w in range(0, joint_distribution.shape[1]):
+            for a in range(0, joint_distribution.shape[2]):
+                if joint_distribution[w_prime, w, a] != 0.0 and p_w_prime_given_w[w_prime, w] != 0.0 and p_w_prime_given_w_a[w_prime, w, a] != 0.0:
+                    r = joint_distribution[w_prime, w, a] * (math.log(p_w_prime_given_w_a[w_prime, w, a], 2) - math.log(p_w_prime_given_w[w_prime, w], 2))
+    return r
+
+def calculate_concept_two(joint_distribution):
+    p_w_prime_given_a   = calc_p_w_prime_given_a(joint_distribution)
+    p_w_prime_given_w_a = calc_p_w_prime_given_w_a(joint_distribution)
+    r = 0
+    for w_prime in range(0, joint_distribution.shape[0]):
+        for w in range(0, joint_distribution.shape[1]):
+            for a in range(0, joint_distribution.shape[2]):
+                if joint_distribution[w_prime, w, a] != 0.0 and p_w_prime_given_a[w_prime, a] != 0.0 and p_w_prime_given_w_a[w_prime, w, a] != 0.0:
+                    r = joint_distribution[w_prime, w, a] * (math.log(p_w_prime_given_w_a[w_prime, w, a], 2) - math.log(p_w_prime_given_a[w_prime, a], 2))
+    return r
