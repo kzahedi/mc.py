@@ -2,6 +2,7 @@
 
 import argparse
 import numpy
+import math
 
 from functions import *
 
@@ -43,10 +44,5 @@ jd = emperical_joint_distribution(combined_binned_data["2 PIP"],
     combined_binned_data["2 DIP"], combined_binned_data["3 MCP"])
 print "done."
 
-
-print jd
-
-# for d in combined_binned_data.keys():
-  # print d
-  # for v in combined_binned_data[d]:
-    # print v
+print calculate_concept_one(jd)
+print calculate_concept_two(jd)

@@ -1,6 +1,7 @@
 import btk
 import numpy
 import os
+import math
 
 def bin_value(v, bins):
   return min(int(v * bins), bins-1)
@@ -112,7 +113,8 @@ def calc_p_w_prime_given_a(joint_distribution):
     p_a         = joint_distribution.sum(axis=(0,1))
     for w_prime in range(0,joint_distribution.shape[0]):
         for a in range(0, joint_distribution.shape[2]):
-            p_w_prime_a[w_prime, a] = p_w_prime_a[w_prime, a] / p_a[a]
+            if p_w_prime_a[w_prime, a] != 0.0 and p_a[a] != 0.0:
+                p_w_prime_a[w_prime, a] = p_w_prime_a[w_prime, a] / p_a[a]
     return p_w_prime_a
 
 def calc_p_w_prime_given_w_a(joint_distribution):
@@ -121,7 +123,8 @@ def calc_p_w_prime_given_w_a(joint_distribution):
     for w_prime in range(0, joint_distribution.shape[0]):
         for w in range(0, joint_distribution.shape[1]):
             for a in range(0, joint_distribution.shape[2]):
-                p_w_prime_given_w_a[w_prime, w, a] = joint_distribution[w_prime, w, a] / p_w_a[w,a]
+                if joint_distribution[w_prime, w, a] != 0.0 and p_w_a[w,a] != 0.0:
+                    p_w_prime_given_w_a[w_prime, w, a] = joint_distribution[w_prime, w, a] / p_w_a[w,a]
     return p_w_prime_given_w_a
 
 def calculate_concept_one(joint_distribution):
