@@ -1,3 +1,7 @@
+import sys
+
+sys.path.append('/Users/zahedi/projects/3rd_sources/BTKCore/build/bin')
+
 import btk
 import numpy
 import os
