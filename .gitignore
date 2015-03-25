@@ -2,3 +2,19 @@
 .ipynb_checkpoints/mc.py-checkpoint.ipynb
 
 .ipynb_checkpoints/Playground-checkpoint.ipynb
+
+libBTKBasicFilters.a
+
+_btk.so
+
+btk.py
+
+btkSwigPYTHON_wrap.cxx
+
+*.a
+
+TDD
+
+TDD.py
+
+*.pyc
