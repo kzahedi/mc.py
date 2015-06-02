@@ -5,9 +5,6 @@ import math
 import re
 from random import random
 
-parent   = "/home/somebody/projects/20141104-rbohand2/"
-filename = parent + "grasp6_1-RBOHand2_2.trb"
-
 ###########################################################################
 #                           read data functions                           #
 ###########################################################################
@@ -366,6 +363,30 @@ def information_decomposition(_joint_distribution, _resolution):
   
   return _synergistic, _uniquewprimea, _uniquewprimew
 
+def synergistic(_joint_distribution, _resolution):
+  _samples = sample_from_delta_p(_joint_distribution, _resolution)
+  _coid    = coinformation(_joint_distribution)
+  _coi     = [coinformation(_p) for _p in _samples]
+
+  _synergistic   = min([v - _coid for v in _coi])
+  
+  return _synergistic
+
+def uniquewprimew(_joint_distribution, _resolution):
+  _samples = sample_from_delta_p(_joint_distribution, _resolution)
+  _mi_xygz = [mi_xygz(_p) for _p in _samples]
+
+  _uniquewprimew = min(_mi_xygz)
+  
+  return _uniquewprimew
+
+def uniquewprimea(_joint_distribution, _resolution):
+  _samples = sample_from_delta_p(_joint_distribution, _resolution)
+  _mi_xzgy = [mi_xzgy(_p) for _p in _samples]
+
+  _uniquewprimea = min(_mi_xzgy)
+  
+  return _uniquewprimea
     
 ###########################################################################
 #                            analyse functions                            #
@@ -414,10 +435,38 @@ def analyse_directory(_parent, _nr_of_bins, _functions):
     return _results
     
     
-directory = "/home/somebody/projects/20141104-rbohand2/"
-bins      = 100
-functions = {"One" : calculate_concept_one, "Two" : calculate_concept_two}
 
-r = analyse_directory(directory, bins, functions)
+bins       = 100
+resolution = 1000
+directory  = "/home/somebody/projects/20141104-rbohand2/"
 
+def fn_uniquewprimew(_joint_distribution):
+    return uniquewprimea(_joint_distribution, resolution)
 
+functions = {"One"             : calculate_concept_one,
+             "Two"             : calculate_concept_two,
+             "Unique(W':W\\A)" : fn_uniquewprimew}
+
+r          = analyse_directory(directory, bins, functions)
+
+l = 0
+for key in functions.keys():
+  if len(key) > l:
+    l = len(key)
+
+def prefix(_s, _l):
+  _r = _s
+  while len(_r) < _l:
+    _r = " " + _r
+  return _r
+
+fd = open("results.txt", "w")
+for key in r.keys():
+    data = r[key]
+    print key
+    fd.write(key + "\n")
+    for k in r[key].keys():
+      s = "   " + prefix(k, l) + ": " + str(r[key][k])
+      print s
+      fd.write(s + "\n")
+fd.close()
