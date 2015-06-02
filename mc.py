@@ -3,6 +3,7 @@ import btk
 import os
 import math
 import re
+import gc
 from random import random
 
 ###########################################################################
@@ -243,11 +244,34 @@ def calculate_bases(_nr_of_world_states, _nr_of_action_states): # tested
         _ze    = ml_eqeq(_z,  _z_range)
         _zpe   = ml_eqeq(_zp, _z_range)
 
-        _dxyz   = numpy.kron(_ze,  numpy.kron(_ye,  _xe))
-        _dxypzp = numpy.kron(_zpe, numpy.kron(_ype, _xe))
-        _dxypz  = numpy.kron(_ze,  numpy.kron(_ype, _xe))
-        _dxyzp  = numpy.kron(_zpe, numpy.kron(_ye,  _xe))
+        _tmp    = numpy.kron(_ye,  _xe)
+        _dxyz   = numpy.kron(_ze, _tmp)
+        del _tmp 
+        gc.collect()
+
+
+        _tmp    = numpy.kron(_ype, _xe)
+        _dxypzp = numpy.kron(_zpe, _tmp)
+        del _tmp 
+        gc.collect()
+
+        _tmp    = numpy.kron(_ype, _xe)
+        _dxypz  = numpy.kron(_ze, _tmp)
+        del _tmp 
+        gc.collect()
+
+        _tmp    = numpy.kron(_ye,  _xe)
+        _dxyzp  = numpy.kron(_zpe, _tmp)
+        del _tmp 
+        gc.collect()
+
         _r.append(_dxyz + _dxypzp - _dxypz - _dxyzp)
+
+        del _dxyz 
+        del _dxypzp
+        del _dxypz
+        del _dxyzp
+        gc.collect()
 
   return numpy.asarray(_r)
 
@@ -463,8 +487,8 @@ def print_and_save_results(_filename, _results, _functions):
 #                         change parameters here                          #
 ###########################################################################
 
-bins       = 100
-resolution = 1000
+bins       = 10
+resolution = 100
 directory  = "/home/somebody/projects/20141104-rbohand2/"
 output     = "results.txt"
 
