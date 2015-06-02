@@ -371,44 +371,47 @@ def information_decomposition(_joint_distribution, _resolution):
 #                            analyse functions                            #
 ###########################################################################
 
-def analyse_directory(parent, nr_of_bins, functions):
+def analyse_directory(_parent, _nr_of_bins, _functions):
     print "reading all files and looking for their domains"
-    domains     = get_domains_for_all_files(parent)
+    _domains     = get_domains_for_all_files(_parent)
     
-    binned_actions = None
+    _binned_actions = None
     
-    pattern = re.compile(r".*RBOHand.*.trb$")
-    files = []
-    walk(directory, pattern, files.append)
+    _pattern = re.compile(r".*RBOHand.*.trb$")
+    _files = []
+    walk(_parent, _pattern, _files.append)
     
     print "Only using the first three files for test reasons."
-    files = files[0:3]
+    _files = _files[0:3]
     
-    results = {}
+    _results = {}
     
-    for f in files:
-        print "reading file " + f
-        data = get_positions(f)
+    for _f in _files:
+        print "reading file " + _f
+        _data = get_positions(_f)
         print "scaling data"
-        scaled_data = scale_data_for_each_marker(data, domains)
+        _scaled_data = scale_data_for_each_marker(_data, _domains)
         print "binning data"
-        binned_data = bin_scaled_data_for_each_marker(scaled_data, nr_of_bins)
+        _binned_data = bin_scaled_data_for_each_marker(_scaled_data, _nr_of_bins)
         print "combining data"
-        combined_binned_data = combine_bins_for_each_marker(binned_data, nr_of_bins)
-        combined_binned_data = combine_random_variables([combined_binned_data[key] for key in combined_binned_data.keys()], nr_of_bins)
-        if binned_actions == None:
+        _combined_binned_data = combine_bins_for_each_marker(_binned_data, _nr_of_bins)
+        _combined_binned_data = combine_random_variables([_combined_binned_data[_key] for _key in _combined_binned_data.keys()], _nr_of_bins)
+        if _binned_actions == None:
             print "randomising action data"
-            binned_actions = [int(random() * nr_of_bins) for v in range(1,len(combined_binned_data))]
+            _binned_actions = [int(random() * _nr_of_bins) for _ in range(1,len(_combined_binned_data))]
         print "calculate joint distribution"
-        jd = emperical_joint_distribution(combined_binned_data[2:len(combined_binned_data)], combined_binned_data[1:len(combined_binned_data)-1], binned_actions)
+        _jd = emperical_joint_distribution( \
+              _combined_binned_data[2:len(_combined_binned_data)],
+              _combined_binned_data[1:len(_combined_binned_data)-1],
+              _binned_actions)
         
-        r = {}
-        for key in functions.keys():
-            print "using method: " + key
-            r[key] = functions[key](jd)
-        results[f] = r
+        _r = {}
+        for _key in _functions.keys():
+            print "using method: " + _key
+            _r[_key] = _functions[_key](_jd)
+        _results[_f] = _r
     print "done."
-    return results
+    return _results
     
     
 directory = "/home/somebody/projects/20141104-rbohand2/"
