@@ -434,25 +434,8 @@ def analyse_directory(_parent, _nr_of_bins, _functions):
     print "done."
     return _results
     
-    
-
-bins       = 100
-resolution = 1000
-directory  = "/home/somebody/projects/20141104-rbohand2/"
-
 def fn_uniquewprimew(_joint_distribution):
     return uniquewprimea(_joint_distribution, resolution)
-
-functions = {"One"             : calculate_concept_one,
-             "Two"             : calculate_concept_two,
-             "Unique(W':W\\A)" : fn_uniquewprimew}
-
-r          = analyse_directory(directory, bins, functions)
-
-l = 0
-for key in functions.keys():
-  if len(key) > l:
-    l = len(key)
 
 def prefix(_s, _l):
   _r = _s
@@ -460,13 +443,38 @@ def prefix(_s, _l):
     _r = " " + _r
   return _r
 
-fd = open("results.txt", "w")
-for key in r.keys():
-    data = r[key]
-    print key
-    fd.write(key + "\n")
-    for k in r[key].keys():
-      s = "   " + prefix(k, l) + ": " + str(r[key][k])
-      print s
-      fd.write(s + "\n")
-fd.close()
+def print_and_save_results(_filename, _results, _functions):
+  _l = 0
+  for _key in _functions.keys():
+    if len(_key) > _l:
+      _l = len(_key)
+
+  _fd = open(_filename, "w")
+  for _key in _results.keys():
+      print _key
+      _fd.write(_key + "\n")
+      for _k in _results[_key].keys():
+        _s = "   " + prefix(_k, _l) + ": " + str(_results[_key][_k])
+        print _s
+        _fd.write(_s + "\n")
+  _fd.close()
+    
+###########################################################################
+#                         change parameters here                          #
+###########################################################################
+
+bins       = 100
+resolution = 1000
+directory  = "/home/somebody/projects/20141104-rbohand2/"
+output     = "results.txt"
+
+functions = {"One"             : calculate_concept_one,
+             "Two"             : calculate_concept_two,
+             "Unique(W':W\\A)" : fn_uniquewprimew}
+
+###########################################################################
+#                     end of parametrisation section                      #
+###########################################################################
+
+results = analyse_directory(directory, bins, functions)
+print_and_save_results(output, results, functions)
