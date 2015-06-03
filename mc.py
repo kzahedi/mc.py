@@ -11,6 +11,21 @@ from random import random
 #                           read data functions                           #
 ###########################################################################
 
+def get_marker_names(_filename):
+    _reader = btk.btkAcquisitionFileReader() # build a btk _reader object
+    _reader.SetFilename(_filename) # set a filename to the _reader
+    _reader.Update()
+    _acq = _reader.GetOutput()
+    _frame_max =  _acq.GetPointFrameNumber() #get the number of frames
+    _all_label = []
+    for _j_index in range(0, _frame_max):
+      _points = {}
+      for _i_index in range(_acq.GetPointNumber()):
+        _point = _acq.GetPoint(_i_index)
+        _label = _point.GetLabel()
+        _all_label.append(_label)
+    return _all_label
+ 
 def get_positions(_filename):
     _reader = btk.btkAcquisitionFileReader() # build a btk _reader object
     _reader.SetFilename(_filename) # set a filename to the _reader
@@ -68,10 +83,10 @@ def get_domains_for_all_files(_directory):
             _minimum = d[_key][0]
             _maximum = d[_key][1]
             if _domain == []:
-                _domain = [ [_minimum[0], _minimum[1], _minimum[2]], [_maximum[0], _maximum[1], _maximum[2]]]
+                _domain = [[_minimum[0], _minimum[1], _minimum[2]], [_maximum[0], _maximum[1], _maximum[2]]]
 
-            _d_min = [ _domain[0][i] if _minimum[i] > _domain[0][i] else _minimum[i] for i in range(0,3)]
-            _d_max = [ _domain[1][i] if _maximum[i] < _domain[1][i] else _maximum[i] for i in range(0,3)]
+            _d_min = [_domain[0][i] if _minimum[i] > _domain[0][i] else _minimum[i] for i in range(0,3)]
+            _d_max = [_domain[1][i] if _maximum[i] < _domain[1][i] else _maximum[i] for i in range(0,3)]
         _global_domains[_key] = [_d_min, _d_max]
     return _global_domains
 
@@ -185,7 +200,9 @@ def calculate_concept_one(_joint_distribution):
     for _w_prime in range(0, _joint_distribution.shape[0]):
         for _w in range(0, _joint_distribution.shape[1]):
             for _a in range(0, _joint_distribution.shape[2]):
-                if _joint_distribution[_w_prime, _w, _a] != 0.0 and _p_w_prime_given_w[_w_prime, _w] != 0.0 and _p_w_prime_given_w_a[_w_prime, _w, _a] != 0.0:
+                if _joint_distribution[_w_prime, _w, _a] != 0.0 and \
+                   _p_w_prime_given_w[_w_prime, _w]      != 0.0 and \
+                   _p_w_prime_given_w_a[_w_prime, _w, _a] != 0.0:
                     _r = _joint_distribution[_w_prime, _w, _a] * \
                          (math.log(_p_w_prime_given_w_a[_w_prime, _w, _a], 2) -
                           math.log(_p_w_prime_given_w[_w_prime, _w], 2))
@@ -258,39 +275,32 @@ def calculate_bases(_nr_of_world_states, _nr_of_action_states): # tested
         _ze    = ml_eqeq(_z,  _z_range)
         _zpe   = ml_eqeq(_zp, _z_range)
 
-        _tmp    = kronecker_product(_ye,  _xe)
-        _dxyz   = kronecker_product(_ze, _tmp)
 
-        _tmp    = kronecker_product(_ype, _xe)
-        _dxypzp = kronecker_product(_zpe, _tmp)
+        if use_numpy_kron == True:
+          _tmp    = numpy.kron(_ye,  _xe)
+          _dxyz   = numpy.kron(_ze, _tmp)
 
-        _tmp    = kronecker_product(_ype, _xe)
-        _dxypz  = kronecker_product(_ze, _tmp)
+          _tmp    = numpy.kron(_ype, _xe)
+          _dxypzp = numpy.kron(_zpe, _tmp)
 
-        _tmp    = kronecker_product(_ye,  _xe)
-        _dxyzp  = kronecker_product(_zpe, _tmp)
+          _tmp    = numpy.kron(_ype, _xe)
+          _dxypz  = numpy.kron(_ze, _tmp)
 
-        # numpy.kron does not clean memory
-        # therefore, replaced by own implementation
-        # _tmp    = numpy.kron(_ye,  _xe)
-        # _dxyz   = numpy.kron(_ze, _tmp)
-        # del _tmp 
-        # gc.collect()
+          _tmp    = numpy.kron(_ye,  _xe)
+          _dxyzp  = numpy.kron(_zpe, _tmp)
 
-        # _tmp    = numpy.kron(_ype, _xe)
-        # _dxypzp = numpy.kron(_zpe, _tmp)
-        # del _tmp 
-        # gc.collect()
+        else:
+          _tmp    = kronecker_product(_ye,  _xe)
+          _dxyz   = kronecker_product(_ze, _tmp)
 
-        # _tmp    = numpy.kron(_ype, _xe)
-        # _dxypz  = numpy.kron(_ze, _tmp)
-        # del _tmp 
-        # gc.collect()
+          _tmp    = kronecker_product(_ype, _xe)
+          _dxypzp = kronecker_product(_zpe, _tmp)
 
-        # _tmp    = numpy.kron(_ye,  _xe)
-        # _dxyzp  = numpy.kron(_zpe, _tmp)
-        # del _tmp 
-        # gc.collect()
+          _tmp    = kronecker_product(_ype, _xe)
+          _dxypz  = kronecker_product(_ze, _tmp)
+
+          _tmp    = kronecker_product(_ye,  _xe)
+          _dxyzp  = kronecker_product(_zpe, _tmp)
 
         _r.append(_dxyz + _dxypzp - _dxypz - _dxyzp)
         bar.next()
@@ -310,6 +320,9 @@ def sample_from_delta_p(_p, _resolution):
   print "p.shape: " + str(_p.shape)
   print "nr of world states:  " + str(_nr_of_world_states)
   print "nr of action states: " + str(_nr_of_action_states)
+  if _nr_of_world_states <= 1 or _nr_of_action_states <= 1:
+    print "not enough world or action states to proceed"
+    return []
   _ps = numpy.ravel(_p)
   _dimension_of_delta_p = _nr_of_world_states * (_nr_of_world_states - 1) * (_nr_of_action_states - 1)
   _lst = [_ps] # list of return values
@@ -327,6 +340,7 @@ def sample_from_delta_p(_p, _resolution):
     _a  = numpy.asmatrix(_a)
 
     _b = _a * _d
+
     if numpy.count_nonzero(ml_eqeq(0, _b)) == 0:
       _v  = numpy.add(_ps, _s)
       _v  = -_v
@@ -423,6 +437,8 @@ def information_decomposition(_joint_distribution, _resolution):
 
 def synergistic(_joint_distribution, _resolution):
   _samples = sample_from_delta_p(_joint_distribution, _resolution)
+  if len(_samples) == 0:
+    return 0.0
   _coid    = coinformation(_joint_distribution)
   _coi     = [coinformation(_p) for _p in _samples]
 
@@ -432,6 +448,8 @@ def synergistic(_joint_distribution, _resolution):
 
 def uniquewprimew(_joint_distribution, _resolution):
   _samples = sample_from_delta_p(_joint_distribution, _resolution)
+  if len(_samples) == 0:
+    return 0.0
   _mi_xygz = [mi_xygz(_p) for _p in _samples]
 
   _uniquewprimew = min(_mi_xygz)
@@ -441,6 +459,8 @@ def uniquewprimew(_joint_distribution, _resolution):
 def uniquewprimea(_joint_distribution, _resolution):
   print "getting samples from Delta_P"
   _samples = sample_from_delta_p(_joint_distribution, _resolution)
+  if len(_samples) == 0:
+    return 0.0
   print "calculating mutual informations"
   _mi_xzgy = [mi_xzgy(_p) for _p in _samples]
 
@@ -474,8 +494,9 @@ def analyse_directory(_parent, _nr_of_bins, _functions):
         _scaled_data = scale_data_for_each_marker(_data, _domains)
         print "binning data"
         _binned_data = bin_scaled_data_for_each_marker(_scaled_data, _nr_of_bins)
-        print "combining data"
+        print "combining data for each marker"
         _combined_binned_data = combine_bins_for_each_marker(_binned_data, _nr_of_bins)
+        print "combining data of all markers"
         _combined_binned_data = combine_random_variables([_combined_binned_data[_key] for _key in _combined_binned_data.keys()], _nr_of_bins)
         if _binned_actions == None:
             print "randomising action data"
@@ -494,7 +515,7 @@ def analyse_directory(_parent, _nr_of_bins, _functions):
     print "done."
     return _results
  
-def analyse_per_finger_directory(_parent, _nr_of_bins, _functions):
+def analyse_per_finger_and_thumb_directory(_parent, _nr_of_bins, _functions):
     print "reading all files and looking for their domains"
     _domains     = get_domains_for_all_files(_parent)
     
@@ -516,23 +537,24 @@ def analyse_per_finger_directory(_parent, _nr_of_bins, _functions):
         _scaled_data = scale_data_for_each_marker(_data, _domains)
         print "binning data"
         _binned_data = bin_scaled_data_for_each_marker(_scaled_data, _nr_of_bins)
-        print "combining data"
+        print "combining data for each marker"
         _combined_binned_data = combine_bins_for_each_marker(_binned_data, _nr_of_bins)
-        _combined_binned_data = combine_random_variables([_combined_binned_data[_key] for _key in _combined_binned_data.keys()], _nr_of_bins)
+        #_combined_binned_data = combine_random_variables([_combined_binned_data[_key] for _key in _combined_binned_data.keys()], _nr_of_bins)
         if _binned_actions == None:
             print "randomising action data"
             _binned_actions = [int(random() * _nr_of_bins) for _ in range(1,len(_combined_binned_data))]
-        print "calculate joint distribution"
-        _jd = emperical_joint_distribution( \
-              _combined_binned_data[2:len(_combined_binned_data)],
-              _combined_binned_data[1:len(_combined_binned_data)-1],
-              _binned_actions)
-        
-        _r = {}
-        for _key in _functions.keys():
-            print "using method: " + _key
-            _r[_key] = _functions[_key](_jd)
-        _results[_f] = _r
+        for _marker_key in _combined_binned_data.keys():
+          print "calculate joint distribution for marker: " + _marker_key
+          _jd = emperical_joint_distribution( \
+                _combined_binned_data[_marker_key][2:len(_combined_binned_data)],
+                _combined_binned_data[_marker_key][1:len(_combined_binned_data)-1],
+                _binned_actions)
+          
+          _r = {}
+          for _key in _functions.keys():
+              print "using method: " + _key
+              _r[_key] = _functions[_key](_jd)
+          _results[_marker_key + " " + _f] = _r
     print "done."
     return _results
     
@@ -565,19 +587,21 @@ def print_and_save_results(_filename, _results, _functions):
 #                         change parameters here                          #
 ###########################################################################
 
-# bins       = 30
-bins       = 10
-resolution = 1000
-directory  = "/home/somebody/projects/20141104-rbohand2/"
-output     = "results.txt"
+use_numpy_kron = True
+# bins           = 30
+bins           = 10
+resolution     = 1000
+directory      = "/home/somebody/projects/20141104-rbohand2/"
+output         = "results.txt"
 
-functions = {"One"             : calculate_concept_one,
-             "Two"             : calculate_concept_two,
-             "Unique(W':W\\A)" : fn_uniquewprimew}
+functions      = {"One"             : calculate_concept_one,
+                  "Two"             : calculate_concept_two,
+                  "Unique(W':W\\A)" : fn_uniquewprimew}
 
 ###########################################################################
 #                     end of parametrisation section                      #
 ###########################################################################
 
-results = analyse_directory(directory, bins, functions)
+# results = analyse_directory(directory, bins, functions)
+results = analyse_per_finger_and_thumb_directory(directory, bins, functions)
 print_and_save_results(output, results, functions)
