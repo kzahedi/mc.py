@@ -4,6 +4,7 @@ import os
 import math
 import re
 import gc
+from progress.bar import Bar
 from random import random
 
 ###########################################################################
@@ -232,9 +233,12 @@ def kronecker_product(_a, _b):
   _la = len(_a)
   _lb = len(_b)
   _c = numpy.zeros(_la * _lb)
+  # bar = Bar('Kronecker product', max=_la)
   for _a_index in range(0, _la):
     for _b_index in range(0, _lb):
       _c[_a_index * _lb + _b_index] = _a[_a_index] * _b[_b_index]
+    # bar.next()
+  # bar.finish()
   return _c
 
 def calculate_bases(_nr_of_world_states, _nr_of_action_states): # tested
@@ -242,6 +246,7 @@ def calculate_bases(_nr_of_world_states, _nr_of_action_states): # tested
   _x_range = range(_nr_of_world_states)
   _y_range = range(_nr_of_world_states)
   _z_range = range(_nr_of_action_states)
+  bar = Bar('Calculate bases', max=(_nr_of_world_states * _nr_of_world_states * _nr_of_action_states))
   for _x in range(0, _nr_of_world_states):
     for _y in range(1, _nr_of_world_states):
       for _z in range(1, _nr_of_action_states):
@@ -264,7 +269,6 @@ def calculate_bases(_nr_of_world_states, _nr_of_action_states): # tested
 
         _tmp    = kronecker_product(_ye,  _xe)
         _dxyzp  = kronecker_product(_zpe, _tmp)
-
 
         # numpy.kron does not clean memory
         # therefore, replaced by own implementation
@@ -289,19 +293,23 @@ def calculate_bases(_nr_of_world_states, _nr_of_action_states): # tested
         # gc.collect()
 
         _r.append(_dxyz + _dxypzp - _dxypz - _dxyzp)
+        bar.next()
 
-        del _dxyz 
-        del _dxypzp
-        del _dxypz
-        del _dxyzp
-        gc.collect()
-
+        # del _dxyz 
+        # del _dxypzp
+        # del _dxypz
+        # del _dxyzp
+        # gc.collect()
+    bar.finish()
   return numpy.asarray(_r)
 
 def sample_from_delta_p(_p, _resolution):
   # assert if shape[0] != shape[1]
   _nr_of_world_states = _p.shape[0]
   _nr_of_action_states = _p.shape[2]
+  print "p.shape: " + str(_p.shape)
+  print "nr of world states:  " + str(_nr_of_world_states)
+  print "nr of action states: " + str(_nr_of_action_states)
   _ps = numpy.ravel(_p)
   _dimension_of_delta_p = _nr_of_world_states * (_nr_of_world_states - 1) * (_nr_of_action_states - 1)
   _lst = [_ps] # list of return values
@@ -311,6 +319,7 @@ def sample_from_delta_p(_p, _resolution):
 
   _d = numpy.asmatrix(_d)
 
+  bar = Bar('Sampling from Delta_P', max=_resolution)
   for _ in range(0, _resolution):
     _a  = numpy.random.randn(_dimension_of_delta_p)
     _na = numpy.linalg.norm(_a)
@@ -354,6 +363,8 @@ def sample_from_delta_p(_p, _resolution):
         _sp = _s + _ps
         _lst.append(_sp)
 
+    bar.next()
+  bar.finish()
   rlst = [numpy.reshape(numpy.ravel(elem),(_nr_of_world_states, _nr_of_world_states, _nr_of_action_states))
           for elem in _lst]
   return rlst
@@ -428,7 +439,9 @@ def uniquewprimew(_joint_distribution, _resolution):
   return _uniquewprimew
 
 def uniquewprimea(_joint_distribution, _resolution):
+  print "getting samples from Delta_P"
   _samples = sample_from_delta_p(_joint_distribution, _resolution)
+  print "calculating mutual informations"
   _mi_xzgy = [mi_xzgy(_p) for _p in _samples]
 
   _uniquewprimea = min(_mi_xzgy)
@@ -440,6 +453,48 @@ def uniquewprimea(_joint_distribution, _resolution):
 ###########################################################################
 
 def analyse_directory(_parent, _nr_of_bins, _functions):
+    print "reading all files and looking for their domains"
+    _domains     = get_domains_for_all_files(_parent)
+    
+    _binned_actions = None
+    
+    _pattern = re.compile(r".*RBOHand.*.trb$")
+    _files = []
+    walk(_parent, _pattern, _files.append)
+    
+    print "Only using the first three files for test reasons."
+    _files = _files[0:3]
+    
+    _results = {}
+    
+    for _f in _files:
+        print "reading file " + _f
+        _data = get_positions(_f)
+        print "scaling data"
+        _scaled_data = scale_data_for_each_marker(_data, _domains)
+        print "binning data"
+        _binned_data = bin_scaled_data_for_each_marker(_scaled_data, _nr_of_bins)
+        print "combining data"
+        _combined_binned_data = combine_bins_for_each_marker(_binned_data, _nr_of_bins)
+        _combined_binned_data = combine_random_variables([_combined_binned_data[_key] for _key in _combined_binned_data.keys()], _nr_of_bins)
+        if _binned_actions == None:
+            print "randomising action data"
+            _binned_actions = [int(random() * _nr_of_bins) for _ in range(1,len(_combined_binned_data))]
+        print "calculate joint distribution"
+        _jd = emperical_joint_distribution( \
+              _combined_binned_data[2:len(_combined_binned_data)],
+              _combined_binned_data[1:len(_combined_binned_data)-1],
+              _binned_actions)
+        
+        _r = {}
+        for _key in _functions.keys():
+            print "using method: " + _key
+            _r[_key] = _functions[_key](_jd)
+        _results[_f] = _r
+    print "done."
+    return _results
+ 
+def analyse_per_finger_directory(_parent, _nr_of_bins, _functions):
     print "reading all files and looking for their domains"
     _domains     = get_domains_for_all_files(_parent)
     
@@ -510,8 +565,9 @@ def print_and_save_results(_filename, _results, _functions):
 #                         change parameters here                          #
 ###########################################################################
 
+# bins       = 30
 bins       = 10
-resolution = 100
+resolution = 1000
 directory  = "/home/somebody/projects/20141104-rbohand2/"
 output     = "results.txt"
 
