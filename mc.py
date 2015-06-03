@@ -228,6 +228,15 @@ def ml_extract(_l, _idx):
           _r = numpy.concatenate((_r, [_l[_index]]))
   return _r
 
+def kronecker_product(_a, _b):
+  _la = len(_a)
+  _lb = len(_b)
+  _c = numpy.zeros(_la * _lb)
+  for _a_index in range(0, _la):
+    for _b_index in range(0, _lb):
+      _c[_a_index * _lb + _b_index] = _a[_a_index] * _b[_b_index]
+  return _c
+
 def calculate_bases(_nr_of_world_states, _nr_of_action_states): # tested
   _r = []
   _x_range = range(_nr_of_world_states)
@@ -244,26 +253,40 @@ def calculate_bases(_nr_of_world_states, _nr_of_action_states): # tested
         _ze    = ml_eqeq(_z,  _z_range)
         _zpe   = ml_eqeq(_zp, _z_range)
 
-        _tmp    = numpy.kron(_ye,  _xe)
-        _dxyz   = numpy.kron(_ze, _tmp)
-        del _tmp 
-        gc.collect()
+        _tmp    = kronecker_product(_ye,  _xe)
+        _dxyz   = kronecker_product(_ze, _tmp)
+
+        _tmp    = kronecker_product(_ype, _xe)
+        _dxypzp = kronecker_product(_zpe, _tmp)
+
+        _tmp    = kronecker_product(_ype, _xe)
+        _dxypz  = kronecker_product(_ze, _tmp)
+
+        _tmp    = kronecker_product(_ye,  _xe)
+        _dxyzp  = kronecker_product(_zpe, _tmp)
 
 
-        _tmp    = numpy.kron(_ype, _xe)
-        _dxypzp = numpy.kron(_zpe, _tmp)
-        del _tmp 
-        gc.collect()
+        # numpy.kron does not clean memory
+        # therefore, replaced by own implementation
+        # _tmp    = numpy.kron(_ye,  _xe)
+        # _dxyz   = numpy.kron(_ze, _tmp)
+        # del _tmp 
+        # gc.collect()
 
-        _tmp    = numpy.kron(_ype, _xe)
-        _dxypz  = numpy.kron(_ze, _tmp)
-        del _tmp 
-        gc.collect()
+        # _tmp    = numpy.kron(_ype, _xe)
+        # _dxypzp = numpy.kron(_zpe, _tmp)
+        # del _tmp 
+        # gc.collect()
 
-        _tmp    = numpy.kron(_ye,  _xe)
-        _dxyzp  = numpy.kron(_zpe, _tmp)
-        del _tmp 
-        gc.collect()
+        # _tmp    = numpy.kron(_ype, _xe)
+        # _dxypz  = numpy.kron(_ze, _tmp)
+        # del _tmp 
+        # gc.collect()
+
+        # _tmp    = numpy.kron(_ye,  _xe)
+        # _dxyzp  = numpy.kron(_zpe, _tmp)
+        # del _tmp 
+        # gc.collect()
 
         _r.append(_dxyz + _dxypzp - _dxypz - _dxyzp)
 
