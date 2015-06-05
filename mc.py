@@ -482,8 +482,8 @@ def analyse_directory(_parent, _nr_of_bins, _functions):
     _files = []
     walk(_parent, _pattern, _files.append)
     
-    print "Only using the first three files for test reasons."
-    _files = _files[0:3]
+    # print "Only using the first three files for test reasons."
+    # _files = _files[4:5]
     
     _results = {}
     
@@ -498,19 +498,20 @@ def analyse_directory(_parent, _nr_of_bins, _functions):
         _combined_binned_data = combine_bins_for_each_marker(_binned_data, _nr_of_bins)
         print "combining data of all markers"
         _combined_binned_data = combine_random_variables([_combined_binned_data[_key] for _key in _combined_binned_data.keys()], _nr_of_bins)
-        if _binned_actions == None:
-            print "randomising action data"
-            _binned_actions = [int(random() * _nr_of_bins) for _ in range(1,len(_combined_binned_data))]
+        print "randomising action data"
+        _binned_actions = [int(random() * _nr_of_bins) for _ in range(1,len(_combined_binned_data))]
         print "calculate joint distribution"
         _jd = emperical_joint_distribution( \
               _combined_binned_data[2:len(_combined_binned_data)],
               _combined_binned_data[1:len(_combined_binned_data)-1],
               _binned_actions)
         
+        print "joint distribution shape: " + str(_jd.shape)
         _r = {}
         for _key in _functions.keys():
             print "using method: " + _key
             _r[_key] = _functions[_key](_jd)
+            print "result: " + str(_r[_key])
         _results[_f] = _r
     print "done."
     return _results
@@ -540,9 +541,8 @@ def analyse_per_finger_and_thumb_directory(_parent, _nr_of_bins, _functions):
         print "combining data for each marker"
         _combined_binned_data = combine_bins_for_each_marker(_binned_data, _nr_of_bins)
         #_combined_binned_data = combine_random_variables([_combined_binned_data[_key] for _key in _combined_binned_data.keys()], _nr_of_bins)
-        if _binned_actions == None:
-            print "randomising action data"
-            _binned_actions = [int(random() * _nr_of_bins) for _ in range(1,len(_combined_binned_data))]
+        print "randomising action data"
+        _binned_actions = [int(random() * _nr_of_bins) for _ in range(1,len(_combined_binned_data))]
         for _marker_key in _combined_binned_data.keys():
           print "calculate joint distribution for marker: " + _marker_key
           _jd = emperical_joint_distribution( \
@@ -587,21 +587,22 @@ def print_and_save_results(_filename, _results, _functions):
 #                         change parameters here                          #
 ###########################################################################
 
-use_numpy_kron = True
+# use_numpy_kron = True
 # bins           = 30
-bins           = 10
-resolution     = 1000
-directory      = "/home/somebody/projects/20141104-rbohand2/"
+# resolution     = 1000
+bins           = 100
+directory      = os.environ["HOME"] + "/data/20141104-rbohand2/"
 output         = "results.txt"
 
 functions      = {"One"             : calculate_concept_one,
-                  "Two"             : calculate_concept_two,
-                  "Unique(W':W\\A)" : fn_uniquewprimew}
+                  "Two"             : calculate_concept_two
+                  }
+                  #"Unique(W':W\\A)" : fn_uniquewprimew}
 
 ###########################################################################
 #                     end of parametrisation section                      #
 ###########################################################################
 
-# results = analyse_directory(directory, bins, functions)
-results = analyse_per_finger_and_thumb_directory(directory, bins, functions)
+# results = analyse_per_finger_and_thumb_directory(directory, bins, functions)
+results = analyse_directory(directory, bins, functions)
 print_and_save_results(output, results, functions)
